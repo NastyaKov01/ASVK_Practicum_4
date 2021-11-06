@@ -85,11 +85,34 @@ void read_tree(std::string name, std::vector<Node*> &tree)
     in.close();
 }
 
+void write_to_dot(std::vector<Node*> tree, int nodes_num)
+{
+    std::ofstream out("tree.dot");
+    out << "digraph G {" << std::endl;
+    std::string cur_node, fol_node;
+    std::stringstream ss;
+    for (int i = 0; i < nodes_num; ++i) {
+        ss.clear();
+        auto fol = tree[i]->get_followers();
+        ss << '"' << i << ":" << tree[i]->get_duration() << '"';
+        ss >> cur_node;
+        for (auto &next: fol) {
+            ss.clear();
+            ss << '"' << next << ":" << tree[next]->get_duration() << '"';
+            ss >> fol_node;
+            out << cur_node << "->" << fol_node << ";" << std::endl;
+        }
+    }
+    out << "}";
+    out.close();
+}
+
 
 int main(int argc, char **argv)
 {
     std::vector<Node*> tree;
     read_tree(argv[1], tree);
+    auto nodes_num = tree.size();
     std::cout << "Tree in memory" << std::endl;
     for (auto &v: tree) {
         std::cout << v->get_duration();
@@ -106,9 +129,9 @@ int main(int argc, char **argv)
         std::cout << std::endl;
     }
 
-
-    auto num = tree.size();
-    for (int i = 0; i < num; ++i) {
+    write_to_dot(tree, nodes_num);
+    
+    for (int i = 0; i < nodes_num; ++i) {
         delete tree[i];
     }
     return 0;
