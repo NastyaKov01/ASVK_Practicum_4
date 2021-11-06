@@ -1,0 +1,13 @@
+#
+# File with jobs
+#  
+5 
+ 6
+#Job number 0 has duration 100 and no dependencies
+       
+100   # job 0
+50     0 	2 #job 1
+12    0 # job 2
+
+8888   4 # job 3
+70000    # job 4
