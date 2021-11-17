@@ -8,18 +8,25 @@
 #include <ctime>
 #include <algorithm>
 #include <set>
+#include <map>
+#include <thread>
 
 
 class Node
 {
     int duration = 0;
     int degree = 0;
+    long long end_time = 0;
     std::vector<int> dependencies;
     std::vector<int> followers;
 public:
     void set_duration(int value) { duration = value; }
 
     int get_duration() { return duration; }
+
+    void set_time(long long value) { end_time = value; }
+
+    long long get_time() { return end_time; }
 
     void set_dependence(int num)
     {
@@ -215,7 +222,6 @@ void set_degrees(std::vector<Node*> &tree, int start, int stop, int degree_mean,
             max_degree--;
         }
         tree[i]->set_degree(degree);
-        std::cout << "degree=" << degree << std::endl;
     }
     for (int i = start; i < stop; ++i) {
         if (tree[i]->get_degree() > max_degree) {
@@ -235,10 +241,8 @@ void set_weights(std::vector<Node*> &tree, int nodes_num, int weight_min, int we
             dur = -dur;
         }
         next_node->set_duration(dur);
-        std::cout << dur << " ";
         tree.push_back(next_node);
     }
-    std::cout << std::endl;
 }
 
 std::vector<Node*> generate_tree(int nodes_num, int weight_min, int weight_max, double weight_variance,
@@ -253,7 +257,7 @@ std::vector<Node*> generate_tree(int nodes_num, int weight_min, int weight_max, 
         stop = in_parts_num;
     }
     while (start != nodes_num) {
-        std::cout << "fold:" << stop-start << " " << start << " " << stop << std::endl;
+        // std::cout << "fold:" << stop-start << " " << start << " " << stop << std::endl;
         set_degrees(tree, start, stop, degree_mean, degree_variance);
         for (int i = start; i < stop; ++i) {
             if (stop - start == 1) {
@@ -263,7 +267,7 @@ std::vector<Node*> generate_tree(int nodes_num, int weight_min, int weight_max, 
             int val = distr(generator);
             int max_steps = tree[i]->get_degree() - tree[i]->dep_num();
             for (int k = 0; k < max_steps; ++k) {
-                std::cout << "!!! i = " << i << " " << "val = " << val << std::endl;
+                // std::cout << "!!! i = " << i << " " << "val = " << val << std::endl;
                 int cnt = 0;
                 while (val == i || val == start || tree[i]->is_in_fol(val) || tree[i]->is_in_dep(val) || 
                         tree[val]->fol_num() + tree[val]->dep_num() == tree[val]->get_degree()) {
@@ -273,7 +277,7 @@ std::vector<Node*> generate_tree(int nodes_num, int weight_min, int weight_max, 
                     val = distr(generator);
                     cnt++;
                 }
-                std::cout << "i=" << i << " " << "val="<< val << std::endl;
+                // std::cout << "i=" << i << " " << "val="<< val << std::endl;
                 if (!path_exists(tree, val, i) && 
                     !(val == i || val == start || tree[i]->is_in_fol(val) || tree[i]->is_in_dep(val))) {
                     tree[i]->set_follower(val);
@@ -294,6 +298,144 @@ std::vector<Node*> generate_tree(int nodes_num, int weight_min, int weight_max, 
     return tree;
 }
 
+long long max_duration(std::map<int, std::vector<int>> &processes, int num_proc, std::vector<Node*> &tree)
+{
+    long long res = 0;
+    for (int i = 0; i < num_proc; ++i) {
+        int last = *(processes[i].end() - 1);
+        long long cur_sum = tree[last]->get_time();
+        if (cur_sum > res) {
+            res = cur_sum;
+        }
+    }
+    return res;
+}
+
+int proc_with_min_time(std::map<int, std::vector<int>> &processes, int num_proc, std::vector<Node*> &tree)
+{
+    long long end_time = 0, tmp = 0;
+    int last = 0;
+    if (processes[0].size() == 0) {
+        end_time = 0;
+    } else {
+        last = *(processes[0].end() - 1);
+        std::cout << "last = " << last << std::endl;
+        end_time = tree[last]->get_time();
+    }
+    std::cout << "%%%" << 0 << " " << tmp << " " << end_time << std::endl;
+    int num = 0;
+    for (int i = 1; i < num_proc; ++i) {
+        if (processes[i].size() == 0) {
+            tmp = 0;
+        } else {
+            last = *(processes[i].end() - 1);
+            std::cout << "last = " << last << std::endl;
+            tmp = tree[last]->get_time();
+        }
+        std::cout << "%%%" << i << " " << tmp << " " << end_time << std::endl;
+        if (tmp < end_time) {
+            end_time = tmp;
+            num = i;
+        }
+    }
+    // std::cout << end_time << " " << num << std::endl;
+    return num;
+}
+
+void adding(int root_num, std::map<int, std::vector<int>> &processes, int num_proc, 
+                std::vector<Node*> &tree, std::vector<int> &placed)
+{
+    std::cout << "***" << std::endl;
+    std::vector<int> visited;
+    visited.push_back(root_num);
+    int cur_node = root_num;
+    while (visited.size() != 0) {
+        cur_node = *(visited.end()-1);
+        std::cout << "cur_node: " << cur_node << " ";
+        visited.pop_back();
+        auto dep = tree[cur_node]->get_dependencies();
+        bool free = true;
+        long long dep_end_time = 0;
+        for (auto d:dep) {
+            if (std::find(placed.begin(), placed.end(), d) == placed.end()){
+                free = false;
+                std::cout << "unplaced node:" << d << std::endl;
+                break;
+            }
+            long long tmp = tree[d]->get_time();
+            if (tmp > dep_end_time) {
+                dep_end_time = tmp;
+            }
+        }
+        if (free) {
+            std::cout << "free" << std::endl;
+            if (std::find(placed.begin(), placed.end(), cur_node) == placed.end()) {
+                placed.push_back(cur_node);
+                std::cout << "cur placed: ";
+                for (auto k: placed) {
+                    std::cout << k << " ";
+                }
+                std::cout << std::endl;
+                int proc = proc_with_min_time(processes, num_proc, tree);
+                std::cout << proc << std::endl;
+                auto dur = tree[cur_node]->get_duration();
+                int proc_fin_time = 0;
+                if (processes[proc].size() != 0) {
+                    int last = *(processes[proc].end() - 1);
+                    proc_fin_time = tree[last]->get_time();
+                }
+                // std::cout << "@last = " << last << std::endl;
+                std::cout <<"!!!" << dep_end_time << " " << proc_fin_time << std::endl;
+                if (dep_end_time < proc_fin_time) {
+                    dep_end_time = proc_fin_time;
+                }
+                std::cout << "!!!" << dep_end_time + dur << std::endl;
+                tree[cur_node]->set_time(dep_end_time + dur);
+                processes[proc].push_back(cur_node);
+            }
+            std::cout << "###" << std::endl;
+            
+        }
+        for (auto fol:tree[cur_node]->get_followers()) {
+            visited.push_back(fol);
+        }
+    }
+}
+
+void start_pos(std::map<int, std::vector<int>> &processes, int num_proc, std::vector<Node*> &tree, std::vector<int> &roots)
+{
+    std::vector<int> placed;
+    int nodes_num = tree.size();
+    while (placed.size() != nodes_num) {
+        for (auto root: roots) {
+            adding(root, processes, num_proc, tree, placed);
+        }
+    }
+}
+
+void simulating_annealing(std::map<int, std::vector<int>> &processes, int num_proc,
+                            std::vector<Node*> &tree, int iter_num, std::vector<int> &roots)
+{
+    for (int i = 0; i < num_proc; ++i) {
+        std::vector<int> p;
+        processes[i] = p;
+    }
+    // for (int i = 0; i < num_proc; ++i) {
+    //     std::cout << processes[i].size() << std::endl; 
+    // }
+    start_pos(processes, num_proc, tree, roots);
+    for (int i = 0; i < num_proc; ++i) {
+        std::cout << "processor " << i << ": "; 
+        for (auto node: processes[i]) {
+            std::cout << node << " ";
+        }
+        int last = *(processes[i].end() - 1);
+        long long end_time = tree[last]->get_time();
+        std::cout << "| " << end_time;
+        std::cout << std::endl;
+    }
+    std::cout << max_duration(processes, num_proc, tree) << std::endl;
+}
 
 int main(int argc, char **argv)
 {
@@ -301,13 +443,18 @@ int main(int argc, char **argv)
     tmp = tmp || true;
     std::cout << tmp << std::endl;
     std::vector<Node*> tree;
+    std::vector<int> roots;
     if (argc == 1) {
         tree = generate_tree(20, 10, 1000, 100000, 2, 4, 2, 4);
     } else {
         read_tree(argv[1], tree);
     }
     auto nodes_num = tree.size();
-
+    for (int i = 0; i < nodes_num; ++i) {
+        if (tree[i]->get_dependencies().size() == 0) {
+            roots.push_back(i);
+        }
+    }
     std::cout << "Tree in memory" << std::endl;
     std::cout << nodes_num << " nodes " << std::endl;
     for (auto &v: tree) {
@@ -324,8 +471,14 @@ int main(int argc, char **argv)
         }
         std::cout << std::endl;
     }
+    for (auto &k: roots) {
+        std::cout << k << " ";
+    }
+    std::cout << std::endl;
     write_to_dot(tree, nodes_num);
     
+    std::map<int, std::vector<int>> processes;
+    simulating_annealing(processes, 3, tree, 1000, roots);
     for (int i = 0; i < nodes_num; ++i) {
         delete tree[i];
     }
