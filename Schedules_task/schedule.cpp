@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <map>
 #include <thread>
+#include <set>
 
 #include "generator.h"
 
@@ -131,7 +132,7 @@ int proc_with_min_time(std::map<int, Job*>  &processors, int num_proc, std::vect
     return num;
 }
 
-long long find_dep_time(int cur_node, std::vector<Node*> &tree)
+long long find_dep_end_time(int cur_node, std::vector<Node*> &tree)
 {
     auto dep = tree[cur_node]->get_dependencies();
     long long dep_end_time = 0;
@@ -143,6 +144,8 @@ long long find_dep_time(int cur_node, std::vector<Node*> &tree)
     }
     return dep_end_time;
 }
+
+// long long find_fol_start_time()
 
 void adding(int root_num, std::map<int, Job*>  &processors, int num_proc, 
                 std::vector<Node*> &tree, std::vector<int> &placed)
@@ -176,7 +179,7 @@ void adding(int root_num, std::map<int, Job*>  &processors, int num_proc,
                 int proc = proc_with_min_time(processors, num_proc, tree);
                 std::cout << proc << std::endl;
                 auto dur = tree[cur_node]->get_duration();
-                long long dep_end_time = find_dep_time(cur_node, tree);
+                long long dep_end_time = find_dep_end_time(cur_node, tree);
                 int proc_fin_time = find_proc_time(proc, processors, tree);
                 std::cout <<"!!!" << dep_end_time << " " << proc_fin_time << std::endl;
                 if (dep_end_time < proc_fin_time) {
@@ -251,12 +254,14 @@ bool check_correctness(std::map<int, Job*>  &processors, int num_proc, std::vect
         auto cur_node = processors[i];
         auto prev = cur_node->prev;
         while (cur_node != NULL) {
-            auto dep_time = find_dep_time(cur_node->num, tree);
+            auto dep_time = find_dep_end_time(cur_node->num, tree);
             auto node_start_time = tree[cur_node->num]->get_time() - tree[cur_node->num]->get_duration();
             if (node_start_time < dep_time) {
+                // std::cout << "error " << cur_node->num << " node start time: " << node_start_time << " dep time: " << dep_time << std::endl;
                 return false;
             }
             if (prev != NULL &&  node_start_time < tree[prev->num]->get_time()) {
+                // std::cout << "ERROR" << std::endl;
                 return false;
             }
             prev = cur_node;
@@ -287,14 +292,12 @@ Job *find_job_by_number(int cur_node, std::map<int, Job*>  &processors, int num_
     return cur;
 }
 
-void change_processor(std::map<int, Job*>  &processors, int num_proc,
-                            std::vector<Node*> &tree, int nodes_num)
+void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*> &tree, int nodes_num)
 {
     // std::default_random_engine generator(time(0));
     std::uniform_int_distribution<int> node_distr(0, nodes_num-1);
     std::random_device generator;
     int cur_node = node_distr(generator), old_proc, new_proc;
-    bool found = false;
     // cur_node = 5;
     Job *cur = find_job_by_number(cur_node, processors, num_proc, &old_proc);
     Job *prev = cur->prev;
@@ -312,7 +315,7 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc,
     std::cout << "old proc: " << old_proc << std::endl;
     std::cout << "new proc: " << new_proc << std::endl;
 
-    auto dep_end_time = find_dep_time(cur_node, tree);
+    auto dep_end_time = find_dep_end_time(cur_node, tree);
     std::cout << "dep_time: " << dep_end_time << std::endl;
     auto node = processors[new_proc];
     std::cout << "QQQ " << new_proc << " " << node->num << std::endl;
@@ -377,7 +380,7 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc,
                 } else {
                     prev_time = tree[prev->num]->get_time();
                 }
-                long long dep_end_time = find_dep_time(node->num, tree);
+                long long dep_end_time = find_dep_end_time(node->num, tree);
                 if (prev_time < dep_end_time) {
                     prev_time = dep_end_time;
                 }
@@ -411,7 +414,7 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc,
                     } else {
                         prev_time = 0;
                     }
-                    long long dep_end_time = find_dep_time(node->num, tree);
+                    long long dep_end_time = find_dep_end_time(node->num, tree);
                     if (prev_time < dep_end_time) {
                         prev_time = dep_end_time;
                     }
@@ -464,7 +467,6 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc,
             if (correct) {
                 break;
             }
-            // }
         }
     }
     for (int i = 0; i < num_proc; ++i) {
@@ -479,11 +481,243 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc,
     }
 }
 
+void find_all_fol(int node_num, std::set<int> &fols, std::vector<Node*> &tree, 
+                    std::map<int, Job*>  &processors, int num_proc) 
+{
+    auto direct_fols = tree[node_num]->get_followers();
+    if (fols.find(node_num) == fols.end()) {
+        fols.insert(node_num);
+        // std::cout << "insert " << node_num << std::endl;
+        for (auto f: direct_fols) {
+            if (fols.find(f) == fols.end()) {
+                // std::cout << "f " << f << std::endl;
+                find_all_fol(f, fols, tree, processors, num_proc);
+            }
+        }
+        int proc;
+        auto node = find_job_by_number(node_num, processors, num_proc, &proc)->next;
+        while (node != NULL) {
+            find_all_fol(node->num, fols, tree, processors, num_proc);
+            node = node->next;
+        }
+    }
+}
+
+void find_all_dep(int node_num, std::set<int> &deps, std::vector<Node*> &tree, 
+                    std::map<int, Job*>  &processors, int num_proc) 
+{
+    auto direct_deps = tree[node_num]->get_dependencies();
+    if (deps.find(node_num) == deps.end()) {
+        deps.insert(node_num);
+        // std::cout << "insert " << node_num << std::endl;
+        for (auto d: direct_deps) {
+            if (deps.find(d) == deps.end()) {
+                // std::cout << "d " << d << std::endl;
+                find_all_dep(d, deps, tree, processors, num_proc);
+            }
+        }
+        int proc;
+        auto node = find_job_by_number(node_num, processors, num_proc, &proc)->prev;
+        while (node != NULL) {
+            find_all_dep(node->num, deps, tree, processors, num_proc);
+            node = node->prev;
+        }
+    }
+}
+
+void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*> &tree, int nodes_num)
+{
+    std::cout << "CHANGE LEVEL " << std::endl;
+    std::uniform_int_distribution<int> node_distr(0, nodes_num-1);
+    std::random_device generator;
+    int cur_node = node_distr(generator), proc;
+
+    // cur_node = 11;
+    std::cout << "cur node " << cur_node << std::endl;
+    Job *cur = find_job_by_number(cur_node, processors, num_proc, &proc), *prev;
+    Job *node = processors[proc];
+    long long dep_end_time = find_dep_end_time(cur_node, tree);
+    long long shift = tree[cur_node]->get_duration();
+    long long node_end_time;
+    long long node_start_time;
+    int job_on_proc = 0, low_bound = 0, up_bound;
+    while(node != NULL) {
+        job_on_proc++;
+        node = node->next;
+    }
+    up_bound = job_on_proc-1;
+    std::set<int> fols, deps;
+    auto dependencies = tree[cur_node]->get_dependencies();
+    for (auto d: dependencies) {
+        find_all_dep(d, deps, tree, processors, num_proc);
+    }
+    auto followers = tree[cur_node]->get_followers();
+    for (auto f: followers) {
+        find_all_fol(f, fols, tree, processors, num_proc);
+    }
+
+    std::cout << "ALL FOLS" << std::endl;
+    std::cout << fols.size()<< std::endl;
+    for (auto f: fols) {
+        std::cout << f << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "ALL DEPS" << std::endl;
+    std::cout << deps.size()<< std::endl;
+    for (auto d: deps) {
+        std::cout << d << " ";
+    }
+    std::cout << std::endl;
+
+    int cnt = 0;
+    node = processors[proc];
+    while (node != NULL) {
+        if (fols.find(node->num) != fols.end()) {
+            up_bound = cnt;
+            break;
+        }
+        cnt++;
+        node = node->next;
+    }
+    node = processors[proc];
+    cnt = 0;
+    while (node != cur) {
+        if (deps.find(node->num) != deps.end()) {
+            low_bound = cnt;
+        }
+        cnt++;
+        node = node->next;
+    }
+
+    std::cout << "low " << low_bound << " up " << up_bound << std::endl;
+    std::cout << "node_start_time " << node_start_time << " dep_end_time " <<  dep_end_time << std::endl;
+
+    int dif = up_bound - low_bound;
+    std::uniform_int_distribution<int> step_distr(0, dif-1);
+    std::cout << "step distr " << step_distr.max() << " " << step_distr.min() << std::endl;
+    int steps = step_distr(generator);
+    std::cout << "steps: " << steps << std::endl;
+    // steps = 0;
+    std::cout << low_bound << " " << up_bound << " " << dif << " " << steps << std::endl;
+    node = processors[proc];
+    for (int i = 0; i < low_bound + steps; ++i) {
+        node = node->next;
+    }
+    std::cout << "cur num " << cur->num << std::endl;
+    std::cout << "node num " << node->num << std::endl;
+
+    if (node == processors[proc] && node_start_time >= dep_end_time && node != cur) {
+        processors[proc] = cur;
+        if (cur->prev) {
+            cur->prev->next = cur->next;
+        }
+        if (cur->next) {
+            cur->next->prev = cur->prev;
+        }
+        cur->prev = NULL;
+        cur->next = node;
+        node->prev = cur;
+        tree[cur->num]->set_time(dep_end_time + shift);
+    } else {
+        if (node_start_time >= dep_end_time && node->prev) {
+            node = node->prev;
+        }
+        if (cur->next == node) {
+            if (cur->prev) {
+                cur->prev->next = node;
+            } else {
+                processors[proc] = node;
+            }
+            if (node->next) {
+                node->next->prev = cur;
+            }
+            node->prev = cur->prev;
+            cur->next = node->next;
+            node->next = cur;
+            cur->prev = node;
+
+        } else if (node->next != cur && node != cur) {
+            if (cur->prev) {
+                cur->prev->next = cur->next;
+            } else {
+                processors[proc] = cur->next;
+            }
+            if (cur->next) {
+                cur->next->prev = cur->prev;
+            }
+            cur->next = node->next;
+            if (node->next) {
+                node->next->prev = cur;
+            }
+            node->next = cur;
+            cur->prev = node;
+        }
+    }
+    if (node != cur) {
+        std::vector<int> queue;
+        node = processors[proc];
+        queue.push_back(node->num);
+        bool correct = false;
+        while (queue.size() != 0) {
+            int cur_node = queue[0];
+            // std::cout << "node from queue " << cur_node << std::endl;
+            queue.erase(queue.begin());
+            int old_proc;
+            Job *node = find_job_by_number(cur_node, processors, num_proc, &old_proc);
+            while (node != NULL) {
+                Job *prev = node->prev;
+                long long node_start_time = tree[node->num]->get_time() - tree[node->num]->get_duration();
+                Node *cur = tree[node->num];
+                // std::cout << "cur num " << node->num << " fol: ";
+                for (auto fol: cur->get_followers()) {
+                    if (std::find(queue.begin(), queue.end(), fol) == queue.end()) {
+                        queue.push_back(fol);
+                    }
+                }
+                long long prev_time;
+                if (prev != NULL) {
+                    prev_time = tree[prev->num]->get_time();
+                } else {
+                    prev_time = 0;
+                }
+                long long dep_end_time = find_dep_end_time(node->num, tree);
+                // std::cout << "dep_time " << dep_end_time << " prev time " << prev_time << std::endl;
+                if (prev_time < dep_end_time) {
+                    prev_time = dep_end_time;
+                }
+                tree[node->num]->set_time(prev_time+tree[node->num]->get_duration());
+                node = node->next;
+            }
+            // std::cout << std::endl << "queue: ";
+            // for (auto i: queue) {
+            //     std::cout << i << " ";
+            // }
+            // std::cout << std::endl << std::endl;
+            if (check_correctness(processors, num_proc, tree)) {
+                std::cout << "correct" << std::endl;
+                correct = true;
+                break;
+            }
+        }
+    }
+    
+    for (int i = 0; i < num_proc; ++i) {
+        std::cout << "processor " << i << ": ";
+        auto node = processors[i];
+        while (node != NULL) {
+            std::cout << node->num << " ";
+            node = node->next;
+        }
+        long long end_time = find_proc_time(i, processors, tree);
+        std::cout << "| " << end_time << std::endl;
+    }
+}
+
+
 void simulating_annealing(std::map<int, Job*>  &processors, int num_proc,
                             std::vector<Node*> &tree, int nodes_num, int iter_num, std::vector<int> &roots)
 {
     for (int i = 0; i < num_proc; ++i) {
-        // std::vector<int> p;
         processors[i] = NULL;
     }
     start_pos(processors, num_proc, tree, roots);
@@ -501,7 +735,8 @@ void simulating_annealing(std::map<int, Job*>  &processors, int num_proc,
     std::cout << max_duration (processors, num_proc, tree) << std::endl;
     auto correct = check_correctness(processors, num_proc, tree);
     std::cout << "correctness at the beginning: " << correct << std::endl;
-    change_processor(processors, num_proc, tree, nodes_num);
+    // change_processor(processors, num_proc, tree, nodes_num);
+    change_level(processors, num_proc, tree, nodes_num);
     correct = check_correctness(processors, num_proc, tree);
     std::cout << "correctness " << correct << std::endl;
 }
@@ -514,7 +749,7 @@ int main(int argc, char **argv)
     std::vector<Node*> tree;
     std::vector<int> roots;
     if (argc == 1) {
-        tree = generate_tree(50, 10, 1000, 100000, 2, 4, 2, 4);
+        tree = generate_tree(20, 10, 1000, 100000, 2, 4, 2, 4);
     } else {
         read_tree(argv[1], tree);
     }
@@ -550,7 +785,7 @@ int main(int argc, char **argv)
  
     std::map<int, Job*> processors;
     int num_proc = 3;
-    simulating_annealing(processors, 3, tree, nodes_num, 1000, roots);
+    simulating_annealing(processors, num_proc, tree, nodes_num, 1000, roots);
 
 
     for (int i = 0; i < nodes_num; ++i) {
