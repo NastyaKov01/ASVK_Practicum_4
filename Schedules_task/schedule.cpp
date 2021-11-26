@@ -20,7 +20,7 @@ struct Job
     Job *next = NULL;
     Job *prev = NULL;
 
-    Job(int val, Job *other): num(val), next(other) {}
+    Job(int val): num(val) {}
 };
 
 void read_tree(std::string name, std::vector<Node*> &tree)
@@ -145,8 +145,6 @@ long long find_dep_end_time(int cur_node, std::vector<Node*> &tree)
     return dep_end_time;
 }
 
-// long long find_fol_start_time()
-
 void adding(int root_num, std::map<int, Job*>  &processors, int num_proc, 
                 std::vector<Node*> &tree, std::vector<int> &placed)
 {
@@ -187,7 +185,7 @@ void adding(int root_num, std::map<int, Job*>  &processors, int num_proc,
                 }
                 std::cout << "!!!" << dep_end_time + dur << std::endl;
                 tree[cur_node]->set_time(dep_end_time + dur);
-                Job *new_job = new Job(cur_node, NULL);
+                Job *new_job = new Job(cur_node);
                 auto node = processors[proc];
                 if (node == NULL) {
                     processors[proc] = new_job;
@@ -209,7 +207,6 @@ void adding(int root_num, std::map<int, Job*>  &processors, int num_proc,
                     std::cout << "| " << end_time;
                     std::cout << std::endl;
                 }
-                // processors[proc].push_back(cur_node);
             }
             std::cout << "###" << std::endl;
             
@@ -236,32 +233,24 @@ void start_pos(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*
     }
 }
 
-double boltzmann_temp(double temp, int i)
-{
-    return temp / log(1 + i);
-}
-
-double probability(double F, double temp)
-{
-    return exp(-F / temp);
-}
-
 bool check_correctness(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*> &tree)
 {
-    // std::cout << "CHECK CORRECTNESS" << std::endl;
+    std::cout << "CHECK CORRECTNESS" << std::endl;
     for (int i = 0; i < num_proc; ++i) {
         
-        auto cur_node = processors[i];
-        auto prev = cur_node->prev;
+        Job *cur_node = processors[i], *prev = NULL;
+        if (cur_node != NULL) {
+            prev = cur_node->prev;
+        }
         while (cur_node != NULL) {
             auto dep_time = find_dep_end_time(cur_node->num, tree);
             auto node_start_time = tree[cur_node->num]->get_time() - tree[cur_node->num]->get_duration();
             if (node_start_time < dep_time) {
-                // std::cout << "error " << cur_node->num << " node start time: " << node_start_time << " dep time: " << dep_time << std::endl;
+                std::cout << "error " << cur_node->num << " node start time: " << node_start_time << " dep time: " << dep_time << std::endl;
                 return false;
             }
             if (prev != NULL &&  node_start_time < tree[prev->num]->get_time()) {
-                // std::cout << "ERROR" << std::endl;
+                std::cout << "ERROR" << std::endl;
                 return false;
             }
             prev = cur_node;
@@ -295,10 +284,11 @@ Job *find_job_by_number(int cur_node, std::map<int, Job*>  &processors, int num_
 void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*> &tree, int nodes_num)
 {
     // std::default_random_engine generator(time(0));
+    std::cout << "CHANGE PROCESSOR" << std::endl;
     std::uniform_int_distribution<int> node_distr(0, nodes_num-1);
     std::random_device generator;
     int cur_node = node_distr(generator), old_proc, new_proc;
-    // cur_node = 5;
+    // cur_node = 7;
     Job *cur = find_job_by_number(cur_node, processors, num_proc, &old_proc);
     Job *prev = cur->prev;
     std::uniform_int_distribution<int> proc_distr(0, num_proc-1);
@@ -307,23 +297,23 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
         new_proc = proc_distr(generator);
     }
     
-    // cur_node=5;
-    // old_proc=0;
-    // new_proc=1;
+    // cur_node=7;
+    // old_proc=2;
+    // new_proc=0;
 
     std::cout << "node to change: " << cur_node << std::endl;
     std::cout << "old proc: " << old_proc << std::endl;
     std::cout << "new proc: " << new_proc << std::endl;
 
     auto dep_end_time = find_dep_end_time(cur_node, tree);
-    std::cout << "dep_time: " << dep_end_time << std::endl;
+    // std::cout << "dep_time: " << dep_end_time << std::endl;
     auto node = processors[new_proc];
-    std::cout << "QQQ " << new_proc << " " << node->num << std::endl;
+    // std::cout << "QQQ " << new_proc << " " << node->num << std::endl;
 
     while(node != NULL) {
-        std::cout << ")))" << std::endl;
+        // std::cout << ")))" << std::endl;
         long long node_end_time = tree[node->num]->get_time();
-        std::cout << "node_time: " << node_end_time << std::endl;
+        // std::cout << "node_time: " << node_end_time << std::endl;
         if (node_end_time < dep_end_time) {
             node = node->next;
         } else {
@@ -334,11 +324,11 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
             }
             std::cout << "cur->num " << cur->num << std::endl;
             if (prev != NULL) {
-                std::cout << "          " << prev->num << std::endl;
+                // std::cout << "          " << prev->num << std::endl;
                 prev->next = cur->next;
                 if (cur->next != NULL) {
                     cur->next->prev = prev;
-                    std::cout << "          " << cur->next->num << std::endl;
+                    // std::cout << "          " << cur->next->num << std::endl;
                 }
             } else {
                 processors[old_proc] = cur->next;
@@ -372,6 +362,7 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
             } else {
                 node = processors[old_proc];
             }
+            std::cout << "кря" << std::endl;
             while (node != NULL) {
                 std::cout << "&&&" << std::endl;
                 long long prev_time;
@@ -388,8 +379,18 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
                 prev = node;
                 node = node->next;
             }
-            
+            std::cout << "мяу" << std::endl;
             std::vector<int> queue;
+            for (int i = 0; i < num_proc; ++i) {
+                std::cout << "processor " << i << ": ";
+                auto node = processors[i];
+                while (node != NULL) {
+                    std::cout << node->num << " ";
+                    node = node->next;
+                }
+                long long end_time = find_proc_time(i, processors, tree);
+                std::cout << "| " << end_time << std::endl;
+            }
             node = find_job_by_number(cur_node, processors, num_proc, &old_proc);
             queue.push_back(node->num);
             bool correct = false;
@@ -400,6 +401,7 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
                 int old_proc;
                 Job *node = find_job_by_number(cur_node, processors, num_proc, &old_proc);
                 while (node != NULL) {
+                    std::cout << "блабла " << node->num << std::endl;
                     Job *prev = node->prev;
                     long long node_start_time = tree[node->num]->get_time() - tree[node->num]->get_duration();
                     Node *cur = tree[node->num];
@@ -423,43 +425,12 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
                     }
                     node = node->next;
                 }
-                std::cout << "queue: ";
-                for (auto i: queue) {
-                    std::cout << i << " ";
-                }
-                // node = processors[0];
-                // std::cout << "CHECK" << std::endl;
-                // while (node != NULL) {
-                //     if (node->prev == NULL)
-                //         std::cout << "NULL ";
-                //     std::cout << node->num << " " << tree[node->num]->get_time() << std::endl;
-                //     if (node->next == NULL)
-                //         std::cout << " NULL " << std::endl;
-                //     node=node->next;
+                // std::cout << "queue: ";
+                // for (auto i: queue) {
+                //     std::cout << i << " ";
                 // }
-                // node = processors[1];
-                // std::cout << "CHECK" << std::endl;
-                // while (node != NULL) {
-                //     if (node->prev == NULL)
-                //         std::cout << "NULL ";
-                //     std::cout << node->num << " " << tree[node->num]->get_time() << std::endl;
-                //     if (node->next == NULL)
-                //         std::cout << " NULL " << std::endl;
-                //     node=node->next;
-                // }
-                // node = processors[2];
-                // std::cout << "CHECK" << std::endl;
-                // while (node != NULL) {
-                //     if (node->prev == NULL)
-                //         std::cout << "NULL ";
-                //     std::cout << node->num << " " << tree[node->num]->get_time() << std::endl;
-                //     if (node->next == NULL)
-                //         std::cout << " NULL " << std::endl;
-                //     node=node->next;
-                // }
-                // std::cout << std::endl;
                 if (check_correctness(processors, num_proc, tree)) {
-                    std::cout << "correct" << std::endl;
+                    // std::cout << "correct" << std::endl;
                     correct = true;
                     break;
                 }
@@ -469,16 +440,16 @@ void change_processor(std::map<int, Job*>  &processors, int num_proc, std::vecto
             }
         }
     }
-    for (int i = 0; i < num_proc; ++i) {
-        std::cout << "processor " << i << ": ";
-        auto node = processors[i];
-        while (node != NULL) {
-            std::cout << node->num << " ";
-            node = node->next;
-        }
-        long long end_time = find_proc_time(i, processors, tree);
-        std::cout << "| " << end_time << std::endl;
-    }
+    // for (int i = 0; i < num_proc; ++i) {
+    //     std::cout << "processor " << i << ": ";
+    //     auto node = processors[i];
+    //     while (node != NULL) {
+    //         std::cout << node->num << " ";
+    //         node = node->next;
+    //     }
+    //     long long end_time = find_proc_time(i, processors, tree);
+    //     std::cout << "| " << end_time << std::endl;
+    // }
 }
 
 void find_all_fol(int node_num, std::set<int> &fols, std::vector<Node*> &tree, 
@@ -487,10 +458,8 @@ void find_all_fol(int node_num, std::set<int> &fols, std::vector<Node*> &tree,
     auto direct_fols = tree[node_num]->get_followers();
     if (fols.find(node_num) == fols.end()) {
         fols.insert(node_num);
-        // std::cout << "insert " << node_num << std::endl;
         for (auto f: direct_fols) {
             if (fols.find(f) == fols.end()) {
-                // std::cout << "f " << f << std::endl;
                 find_all_fol(f, fols, tree, processors, num_proc);
             }
         }
@@ -509,10 +478,8 @@ void find_all_dep(int node_num, std::set<int> &deps, std::vector<Node*> &tree,
     auto direct_deps = tree[node_num]->get_dependencies();
     if (deps.find(node_num) == deps.end()) {
         deps.insert(node_num);
-        // std::cout << "insert " << node_num << std::endl;
         for (auto d: direct_deps) {
             if (deps.find(d) == deps.end()) {
-                // std::cout << "d " << d << std::endl;
                 find_all_dep(d, deps, tree, processors, num_proc);
             }
         }
@@ -533,7 +500,7 @@ void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<No
     int cur_node = node_distr(generator), proc;
 
     // cur_node = 11;
-    std::cout << "cur node " << cur_node << std::endl;
+    // std::cout << "cur node " << cur_node << std::endl;
     Job *cur = find_job_by_number(cur_node, processors, num_proc, &proc), *prev;
     Job *node = processors[proc];
     long long dep_end_time = find_dep_end_time(cur_node, tree);
@@ -556,19 +523,6 @@ void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<No
         find_all_fol(f, fols, tree, processors, num_proc);
     }
 
-    std::cout << "ALL FOLS" << std::endl;
-    std::cout << fols.size()<< std::endl;
-    for (auto f: fols) {
-        std::cout << f << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "ALL DEPS" << std::endl;
-    std::cout << deps.size()<< std::endl;
-    for (auto d: deps) {
-        std::cout << d << " ";
-    }
-    std::cout << std::endl;
-
     int cnt = 0;
     node = processors[proc];
     while (node != NULL) {
@@ -589,14 +543,14 @@ void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<No
         node = node->next;
     }
 
-    std::cout << "low " << low_bound << " up " << up_bound << std::endl;
-    std::cout << "node_start_time " << node_start_time << " dep_end_time " <<  dep_end_time << std::endl;
+    // std::cout << "low " << low_bound << " up " << up_bound << std::endl;
+    // std::cout << "node_start_time " << node_start_time << " dep_end_time " <<  dep_end_time << std::endl;
 
     int dif = up_bound - low_bound;
     std::uniform_int_distribution<int> step_distr(0, dif-1);
-    std::cout << "step distr " << step_distr.max() << " " << step_distr.min() << std::endl;
+    // std::cout << "step distr " << step_distr.max() << " " << step_distr.min() << std::endl;
     int steps = step_distr(generator);
-    std::cout << "steps: " << steps << std::endl;
+    // std::cout << "steps: " << steps << std::endl;
     // steps = 0;
     std::cout << low_bound << " " << up_bound << " " << dif << " " << steps << std::endl;
     node = processors[proc];
@@ -660,7 +614,7 @@ void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<No
         bool correct = false;
         while (queue.size() != 0) {
             int cur_node = queue[0];
-            // std::cout << "node from queue " << cur_node << std::endl;
+            std::cout << "node from queue " << cur_node << std::endl;
             queue.erase(queue.begin());
             int old_proc;
             Job *node = find_job_by_number(cur_node, processors, num_proc, &old_proc);
@@ -693,50 +647,221 @@ void change_level(std::map<int, Job*>  &processors, int num_proc, std::vector<No
             //     std::cout << i << " ";
             // }
             // std::cout << std::endl << std::endl;
-            if (check_correctness(processors, num_proc, tree)) {
-                std::cout << "correct" << std::endl;
+            bool res = check_correctness(processors, num_proc, tree);
+            std::cout << "PUM" << std::endl;
+            if (res) {
+                // std::cout << "correct" << std::endl;
                 correct = true;
                 break;
             }
         }
     }
     
+    // for (int i = 0; i < num_proc; ++i) {
+    //     std::cout << "processor " << i << ": ";
+    //     auto node = processors[i];
+    //     while (node != NULL) {
+    //         std::cout << node->num << " ";
+    //         node = node->next;
+    //     }
+    //     long long end_time = find_proc_time(i, processors, tree);
+    //     std::cout << "| " << end_time << std::endl;
+    // }
+}
+
+double boltzmann_temp(double temp, int i)
+{
+    return temp / log(1 + i);
+}
+
+double probability(double F, double temp)
+{
+    return exp(-F / temp);
+}
+
+void free_processors(std::map<int, Job*>  &processors, int num_proc)
+{
     for (int i = 0; i < num_proc; ++i) {
-        std::cout << "processor " << i << ": ";
-        auto node = processors[i];
-        while (node != NULL) {
-            std::cout << node->num << " ";
-            node = node->next;
+        auto cur = processors[i];
+        auto next = cur;
+        while(cur != NULL) {
+            next = cur->next;
+            delete cur;
+            cur = next;
         }
-        long long end_time = find_proc_time(i, processors, tree);
-        std::cout << "| " << end_time << std::endl;
     }
 }
 
-
-void simulating_annealing(std::map<int, Job*>  &processors, int num_proc,
-                            std::vector<Node*> &tree, int nodes_num, int iter_num, std::vector<int> &roots)
+void fill_processors(std::map<int, Job*>  &processors, std::map<int, Job*>  &new_processors, int num_proc)
 {
     for (int i = 0; i < num_proc; ++i) {
+        Job *node = processors[i], *other_node = new_processors[i], *prev = NULL;
+        while (node != NULL) {
+            Job *new_job = new Job(node->num);
+            if (other_node == NULL) {
+                new_processors[i] = new_job;
+                other_node = new_job;
+            } else {
+                other_node->next = new_job;
+                new_job->prev = other_node;
+                other_node = other_node->next;
+            }
+            node = node->next;
+        }
+    }
+}
+
+void simulating_annealing(std::map<int, Job*>  &processors, int num_proc, std::vector<Node*> &tree, std::vector<int> &roots,
+                            int nodes_num, int iter_num, int one_temp_iter, double start_temp)
+{
+    std::map<int, Job*> cur_processors, new_processors;
+    for (int i = 0; i < num_proc; ++i) {
         processors[i] = NULL;
+        cur_processors[i] = NULL;
+        new_processors[i] = NULL;
     }
     start_pos(processors, num_proc, tree, roots);
     for (int i = 0; i < num_proc; ++i) {
         std::cout << "processor " << i << ": ";
         auto node = processors[i];
         while (node != NULL) {
-            std::cout << node->num << " ";
+            std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
             node = node->next;
         }
         long long end_time = find_proc_time(i, processors, tree);
         std::cout << "| " << end_time;
         std::cout << std::endl;
     }
+    fill_processors(processors, new_processors, num_proc);
+    fill_processors(processors, cur_processors, num_proc);
+    
+    for (int i = 0; i < num_proc; ++i) {
+        std::cout << "new_processor " << i << ": ";
+        auto node = new_processors[i];
+        while (node != NULL) {
+            std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+            node = node->next;
+        }
+        long long end_time = find_proc_time(i, new_processors, tree);
+        std::cout << "| " << end_time;
+        std::cout << std::endl;
+    }
+    for (int i = 0; i < num_proc; ++i) {
+        std::cout << "cur_processor " << i << ": ";
+        auto node = cur_processors[i];
+        while (node != NULL) {
+            std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+            node = node->next;
+        }
+        long long end_time = find_proc_time(i, cur_processors, tree);
+        std::cout << "| " << end_time;
+        std::cout << std::endl;
+    }
+    long long max_time = max_duration (processors, num_proc, tree);
     std::cout << max_duration (processors, num_proc, tree) << std::endl;
     auto correct = check_correctness(processors, num_proc, tree);
     std::cout << "correctness at the beginning: " << correct << std::endl;
-    // change_processor(processors, num_proc, tree, nodes_num);
-    change_level(processors, num_proc, tree, nodes_num);
+
+    // for (int k = 0; k < 100; ++k) {
+    //     change_level(processors, num_proc, tree, nodes_num);
+    //     for (int i = 0; i < num_proc; ++i) {
+    //         std::cout << "processor " << i << ": ";
+    //         auto node = processors[i];
+    //         while (node != NULL) {
+    //             std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+    //             node = node->next;
+    //         }
+    //         long long end_time = find_proc_time(i, processors, tree);
+    //         std::cout << "| " << end_time;
+    //         std::cout << std::endl;
+    //     }
+    //     bool correct = check_correctness(processors, num_proc, tree);
+    //     std::cout << "correctness " << correct << std::endl;
+    //     if (!correct) {
+    //         std::cout << "ERROR" << std::endl;
+    //         break;
+    //     }
+    // }
+
+    double temp = start_temp;
+    std::uniform_int_distribution<int> change_distr(0, 1);
+    std::random_device generator;
+    int step;
+    bool check;
+    // free_processors(new_processors, num_proc);
+    // fill_processors(cur_processors, new_processors, num_proc);
+    for (int i = 0; i < num_proc; ++i) {
+        std::cout << "new_processor " << i << ": ";
+        auto node = new_processors[i];
+        while (node != NULL) {
+            std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+            node = node->next;
+        }
+        long long end_time = find_proc_time(i, new_processors, tree);
+        std::cout << "| " << end_time;
+        std::cout << std::endl;
+    }
+    for (int i = 0; i < iter_num; ++i) {
+        if (check) {
+            break;
+        }
+        for (int k = 0; k < one_temp_iter; ++k) {
+            step = change_distr(generator);
+            if (step == 0) {
+                change_processor(new_processors, num_proc, tree, nodes_num);
+            } else {
+                change_level(new_processors, num_proc, tree, nodes_num);
+            }
+            check = check_correctness(new_processors, num_proc, tree);
+            if (!check) {
+                std::cout << "ERROR PANIC" << std::endl;
+                break;
+            } else {
+                std::cout << "CORRECT YET" << std::endl;
+            }
+            for (int j = 0; j < num_proc; ++j) {
+                std::cout << "new_processor " << j << ": ";
+                auto node = new_processors[j];
+                while (node != NULL) {
+                    std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+                    node = node->next;
+                }
+                long long end_time = find_proc_time(j, new_processors, tree);
+                std::cout << "| " << end_time;
+                std::cout << std::endl;
+            }
+            long long cur_time = max_duration (new_processors, num_proc, tree);
+            std::cout << "cur time: " << cur_time << std::endl;
+            if (cur_time < max_time) {
+                max_time = cur_time;
+                std::cout << "new time: " << max_time << std::endl;
+                free_processors(processors, num_proc);
+                fill_processors(new_processors, processors, num_proc);
+                for (int j = 0; j < num_proc; ++j) {
+                    std::cout << "      processor " << j << ": ";
+                    auto node = processors[i];
+                    while (node != NULL) {
+                        std::cout << node->num << ":" << tree[node->num]->get_time() << " ";
+                        node = node->next;
+                    }
+                    long long end_time = find_proc_time(i, processors, tree);
+                    std::cout << "| " << end_time;
+                    std::cout << std::endl;
+                }
+            } else {
+                double prob = probability(cur_time - max_time, temp);
+                std::cout << "prob: " << prob << std::endl;
+                if (prob > 0.5) {
+                    fill_processors(new_processors, cur_processors, num_proc);
+                } else {
+                    free_processors(new_processors, num_proc);
+                    fill_processors(cur_processors, new_processors, num_proc);
+                }
+            }
+        }
+        temp = boltzmann_temp(temp, i);
+    }
+
     correct = check_correctness(processors, num_proc, tree);
     std::cout << "correctness " << correct << std::endl;
 }
@@ -749,7 +874,7 @@ int main(int argc, char **argv)
     std::vector<Node*> tree;
     std::vector<int> roots;
     if (argc == 1) {
-        tree = generate_tree(20, 10, 1000, 100000, 2, 4, 2, 4);
+        tree = generate_tree(500, 10, 1000, 100000, 2, 4, 2, 4);
     } else {
         read_tree(argv[1], tree);
     }
@@ -785,20 +910,20 @@ int main(int argc, char **argv)
  
     std::map<int, Job*> processors;
     int num_proc = 3;
-    simulating_annealing(processors, num_proc, tree, nodes_num, 1000, roots);
-
+    simulating_annealing(processors, num_proc, tree, roots, nodes_num, 10, 5, 1000);
 
     for (int i = 0; i < nodes_num; ++i) {
         delete tree[i];
     }
-    for (int i = 0; i < num_proc; ++i) {
-        auto cur = processors[i];
-        auto next = cur;
-        while(cur != NULL) {
-            next = cur->next;
-            free(cur);
-            cur = next;
-        }
-    }
+    // for (int i = 0; i < num_proc; ++i) {
+    //     auto cur = processors[i];
+    //     auto next = cur;
+    //     while(cur != NULL) {
+    //         next = cur->next;
+    //         delete cur;
+    //         cur = next;
+    //     }
+    // }
+    free_processors(processors, num_proc);
     return 0;
 }
