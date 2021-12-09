@@ -6,8 +6,6 @@
 #include <stdexcept>
 #include <exception>
 
-#include <iostream>
-
 class Params
 {
 public:
