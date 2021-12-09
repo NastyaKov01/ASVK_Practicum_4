@@ -52,7 +52,6 @@ public:
     virtual const std::string ToString() const = 0;
     virtual const std::vector<char> GetVertices() const = 0;
     virtual const std::vector<std::pair<char, char>> GetEdges() const = 0;
-    // virtual std::unique_ptr<TGraph> operator +=(TGraph &other) = 0;
     virtual std::unique_ptr<TGraph> AsWeighted(int default_weight) const = 0;
 };
 
@@ -75,6 +74,8 @@ public:
     friend Weighted operator+=(Weighted &first, Weighted &second);
     friend Weighted operator+(Weighted &first, Weighted &second);
     friend Weighted operator+(Weighted &first, TGraph &second);
+    friend Weighted operator-=(Weighted &first, Weighted &second);
+    friend Weighted operator-(Weighted &first, TGraph &second);
 };
 
 class Simple: public TGraph
@@ -94,6 +95,8 @@ public:
     friend Simple operator+=(Simple &first, TGraph &second);
     friend Simple operator+(Simple &first, TGraph &second);
     friend Simple operator+(Simple &first, Weighted &second);
+    friend Simple operator-=(Simple &first, TGraph &second);
+    friend Simple operator-(Simple &first, TGraph &second);
 };
 
 class Bipartite: public TGraph
@@ -116,10 +119,9 @@ public:
     friend Bipartite operator+(Bipartite &first, Bipartite &second);
     friend Bipartite operator+(Bipartite &first, Weighted &second);
     friend Simple operator+(Bipartite &first, TGraph &second);
-    // friend Bipartite operator-=(Bipartite &first, Bipartite &second);
-    // friend Bipartite operator-(Bipartite &first, Bipartite &second);
-    // friend Bipartite operator-(Bipartite &first, Weighted &second);
-    // friend Simple operator-(Bipartite &first, TGraph &second);
+    friend Bipartite operator-=(Bipartite &first, Bipartite &second);
+    friend Bipartite operator-(Bipartite &first, Bipartite &second);
+    friend Simple operator-(Bipartite &first, TGraph &second);
 };
 
 class Complete: public TGraph
@@ -139,19 +141,7 @@ public:
     friend Complete operator+(Complete &first, Complete &second);
     friend Simple operator+(Complete &first, TGraph &second);
     friend Simple operator+(Complete &first, Weighted &second);
+    friend Complete operator-=(Complete &first, Complete &second);
+    friend Complete operator-(Complete &first, Complete &second);
+    friend Simple operator-(Complete &first, TGraph &second);
 };
-
-// class Simple: public TGraph
-// {
-//     std::vector<char> vertices;
-//     std::vector<std::pair<char, char>> edges;
-// public:
-//     using ParType = SimpleParams;
-//     Simple(std::unique_ptr<SimpleParams> && params);
-//     Simple(std::vector<std::string> eds);
-//     ~Simple() {}
-//     const std::vector<char> GetVertices();
-//     const std::vector<std::pair<char, char>> GetEdges();
-//     const std::string ToString();
-//     std::unique_ptr<TGraph> AsWeighted(int default_weight);
-// };
