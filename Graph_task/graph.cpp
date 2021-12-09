@@ -2,72 +2,173 @@
 
 #include "factory.h"
 
+#define INF 100000
+
+std::vector<std::pair<char, char>> find_min_path(Weighted &graph, char start, char finish)
+{
+    auto verts = graph.GetVertices();
+    auto edges = graph.GetEdges();
+    auto weights = graph.GetWeights();
+    std::vector<std::pair<char, char>> path;
+    std::vector<char> visited;
+    std::map<char, int> path_length;
+    for (auto v: verts) {
+        if (v == start) {
+            path_length[v] = 0;
+        } else {
+            path_length[v] = INF;
+        }
+    }
+    visited.push_back(start);
+    char cur = start;
+    while (visited.size() != verts.size()) {
+        int min_path = INF;
+        char candidate = cur;
+        auto len = edges.size();
+        for (int i = 0; i < len; ++i) {
+            if (edges[i].first == cur) {
+                auto place = std::find(visited.begin(), visited.end(), edges[i].second);
+                if (place == visited.end()) {
+                    if (path_length[cur] + weights[i] < path_length[edges[i].second]) {
+                        path_length[edges[i].second] = path_length[cur] + weights[i];
+                    }
+                    int cur_path = weights[i];
+                    if (cur_path < min_path) {
+                        candidate = edges[i].second;
+                        min_path = cur_path;
+                    }
+                }
+            }
+            if (edges[i].second == cur) {
+                auto place = std::find(visited.begin(), visited.end(), edges[i].first);
+                if (place == visited.end()) {
+                    if (path_length[cur] + weights[i] < path_length[edges[i].first]) {
+                        path_length[edges[i].first] = path_length[cur] + weights[i];
+                    }
+                    int cur_path = weights[i];
+                    if (cur_path < min_path) {
+                        candidate = edges[i].first;
+                        min_path = cur_path;
+                    } 
+                }
+            }
+        }
+        if (candidate == cur && visited.size() != verts.size()) {
+            throw std::logic_error("Not a connected graph!");
+        }
+        visited.push_back(candidate);
+        cur = candidate;
+    }
+    auto cur_length = path_length[finish];
+    char next;
+    cur = finish;
+    while (cur != start) {
+        auto len = edges.size();
+        for (int i = 0; i < len; ++i) {
+            if (edges[i].first == cur) {
+                if (path_length[cur] - weights[i] == path_length[edges[i].second]) {
+                    next = edges[i].second;
+                    break;
+                }
+            }
+            if (edges[i].second == cur) {
+                if (path_length[cur] - weights[i] == path_length[edges[i].first]) {
+                    next = edges[i].first;
+                    break;
+                }
+            }
+        }
+        path.push_back(std::make_pair(next, cur));
+        cur = next;
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
 int main()
 {
-    std::vector<char> v1 {'A','B','M', 'N'};
-    std::vector<char> v2 {'E','F', 'K', 'D'};
-    auto b1 = GraphFactory().Create(std::string("bipartite"), std::make_unique<BipartParams> (v1, v2));
-    std::cout << "Bipartite Graph" << std::endl;
-    for (auto e: b1->GetEdges()) {
+    std::vector<std::string> v {"AB", "AC", "AF", "BC", "CF", "FE", "CD", "BD", "ED"};
+    std::vector<int> w {7, 9, 14, 10, 2, 9, 11, 15, 6};
+    // std::vector<std::string> v {"AB", "AC", "BC", "CE", "BD", "BE", "CD", "DE", "DG", "EG"};
+    // std::vector<int> w {2, 1, 2, 6, 4, 5, 4, 2, 6, 3};
+    auto woo = GraphFactory().Create("weighted", std::make_unique<WeightParams>(v, w));
+    auto weighted = dynamic_cast<Weighted*>(woo.get());
+    std::vector<std::pair<char, char>> res;
+    try {
+        res = find_min_path(*weighted, 'A', 'E');
+    } catch (const std::exception &e) {
+        std::cout << e.what() << std::endl;
+    }
+    
+    for (auto e: res) {
         std::cout << e.first << e.second << " ";
     }
     std::cout << std::endl;
-    std::cout << b1->ToString() << std::endl;
 
-    std::vector<char> v3 {'A','B','C','D'};
-    std::vector<char> v4 {'E','F'};
-    auto b2 = GraphFactory().Create(std::string("bipartite"), std::make_unique<BipartParams> (v3, v4));
-    std::cout << "Bipartite Graph" << std::endl;
-    for (auto e: b2->GetEdges()) {
-        std::cout << e.first << e.second << " ";
-    }
-    std::cout << std::endl;
-    std::cout << b2->ToString() << std::endl;
+    // std::vector<char> v1 {'A','B','M', 'N'};
+    // std::vector<char> v2 {'E','F', 'K', 'D'};
+    // auto b1 = GraphFactory().Create(std::string("bipartite"), std::make_unique<BipartParams> (v1, v2));
+    // std::cout << "Bipartite Graph" << std::endl;
+    // for (auto e: b1->GetEdges()) {
+    //     std::cout << e.first << e.second << " ";
+    // }
+    // std::cout << std::endl;
+    // std::cout << b1->ToString() << std::endl;
 
-    auto b4 = dynamic_cast<Bipartite*>(b1.get());
-    auto b5 = dynamic_cast<Bipartite*>(b2.get());
+    // std::vector<char> v3 {'A','B','C','D'};
+    // std::vector<char> v4 {'E','F'};
+    // auto b2 = GraphFactory().Create(std::string("bipartite"), std::make_unique<BipartParams> (v3, v4));
+    // std::cout << "Bipartite Graph" << std::endl;
+    // for (auto e: b2->GetEdges()) {
+    //     std::cout << e.first << e.second << " ";
+    // }
+    // std::cout << std::endl;
+    // std::cout << b2->ToString() << std::endl;
 
-    std::cout << (*b4-*b5).ToString() << std::endl;
-    std::cout << (*b5-*b4).ToString() << std::endl;
-    *b4 -= *b5;
-    std::cout << b4->ToString() << std::endl;
+    // auto b4 = dynamic_cast<Bipartite*>(b1.get());
+    // auto b5 = dynamic_cast<Bipartite*>(b2.get());
 
-    // std::cout << "      bipart + bipart" << std::endl;
-    // std::cout << (*b4+*b5).ToString() << std::endl;
-    // *b4 += *b5;
+    // std::cout << (*b4-*b5).ToString() << std::endl;
+    // std::cout << (*b5-*b4).ToString() << std::endl;
+    // *b4 -= *b5;
     // std::cout << b4->ToString() << std::endl;
 
-    std::vector<std::string> wv1{"FD", "ED", "AF", "AD"};
-    std::vector<int> wv2 {5, 6, 8, 9};
-    auto w2 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
-    auto w3 = dynamic_cast<Weighted*>(w2.get());
-    std::cout << (*b5-*w3).ToString() << std::endl;
+    // // std::cout << "      bipart + bipart" << std::endl;
+    // // std::cout << (*b4+*b5).ToString() << std::endl;
+    // // *b4 += *b5;
+    // // std::cout << b4->ToString() << std::endl;
 
-    std::cout << w3->ToString() << std::endl;
-    std::vector<std::string> wv4{"AB", "BF", "FD", "AE", "ED"};
-    std::vector<int> wv5 {10, 12, 3, 15, 20};
-    auto w4 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv4, wv5));
-    auto w5 = dynamic_cast<Weighted*>(w4.get());
-    std::cout << w5->ToString() << std::endl;
-    std::cout << (*w3 - *w5).ToString() << std::endl;
-    std::cout << (*w5 - *w3).ToString() << std::endl;
-    *w3 -= *w5;
-    std::cout << w3->ToString() << std::endl;
-    std::cout << (*w5 - *b5).ToString() << std::endl;
+    // std::vector<std::string> wv1{"FD", "ED", "AF", "AD"};
+    // std::vector<int> wv2 {5, 6, 8, 9};
+    // auto w2 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
+    // auto w3 = dynamic_cast<Weighted*>(w2.get());
+    // std::cout << (*b5-*w3).ToString() << std::endl;
 
-    std::vector<char> v {'A','B','M', 'N', 'D'};
-    auto c2 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v));
-    auto c3 = dynamic_cast<Complete*>(c2.get());
-    std::vector<char> vec {'M', 'B'};
-    auto c4 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (vec));
-    auto c5 = dynamic_cast<Complete*>(c4.get());
-    std::cout << c3->ToString() << std::endl;
-    std::cout << c5->ToString() << std::endl;
-    std::cout << (*c3-*c5).ToString() << std::endl;
-    std::cout << (*c3 - *b4).ToString() << std::endl;
-    std::cout << (*c3 - *w3).ToString() << std::endl;
-    *c3 -= *c5;
-    std::cout << c3->ToString() << std::endl;
+    // std::cout << w3->ToString() << std::endl;
+    // std::vector<std::string> wv4{"AB", "BF", "FD", "AE", "ED"};
+    // std::vector<int> wv5 {10, 12, 3, 15, 20};
+    // auto w4 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv4, wv5));
+    // auto w5 = dynamic_cast<Weighted*>(w4.get());
+    // std::cout << w5->ToString() << std::endl;
+    // std::cout << (*w3 - *w5).ToString() << std::endl;
+    // std::cout << (*w5 - *w3).ToString() << std::endl;
+    // *w3 -= *w5;
+    // std::cout << w3->ToString() << std::endl;
+    // std::cout << (*w5 - *b5).ToString() << std::endl;
+
+    // std::vector<char> v {'A','B','M', 'N', 'D'};
+    // auto c2 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v));
+    // auto c3 = dynamic_cast<Complete*>(c2.get());
+    // std::vector<char> vec {'M', 'B'};
+    // auto c4 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (vec));
+    // auto c5 = dynamic_cast<Complete*>(c4.get());
+    // std::cout << c3->ToString() << std::endl;
+    // std::cout << c5->ToString() << std::endl;
+    // std::cout << (*c3-*c5).ToString() << std::endl;
+    // std::cout << (*c3 - *b4).ToString() << std::endl;
+    // std::cout << (*c3 - *w3).ToString() << std::endl;
+    // *c3 -= *c5;
+    // std::cout << c3->ToString() << std::endl;
     
     // std::cout << "Weighted Graph" << std::endl;
     // std::cout << w2->ToString() << std::endl;

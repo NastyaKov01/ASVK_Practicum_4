@@ -428,11 +428,17 @@ Bipartite operator+=(Bipartite &first, Bipartite &second)
     auto second_p2 = second.GetPart2();
     for (auto v: second_p1) {
         if (std::find(first.part1.begin(), first.part1.end(), v) == first.part1.end()) {
+            if (std::find(first.part2.begin(), first.part2.end(), v) != first.part2.end()) {
+                throw std::logic_error("Can not sum");
+            }
             first.part1.push_back(v);
         }
     }
     for (auto v: second_p2) {
         if (std::find(first.part2.begin(), first.part2.end(), v) == first.part2.end()) {
+            if (std::find(first.part1.begin(), first.part1.end(), v) != first.part1.end()) {
+                throw std::logic_error("Can not sum");
+            }
             first.part2.push_back(v);
         }
     }
