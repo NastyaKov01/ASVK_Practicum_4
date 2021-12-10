@@ -18,7 +18,7 @@ protected:
         b3 = GraphFactory().Create(std::string("bipartite"), std::make_unique<BipartParams> (b3_p1, b3_p2));
         std::vector<char> v {'A','B','M', 'N', 'D'};
         complete = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v));
-        std::vector<std::string> wv1{"AB", "BF", "FD", "AE", "ED"};
+        std::vector<std::string> wv1{{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
         std::vector<int> wv2 {10, 12, 3, 15, 20};
         weighted = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
         std::vector<std::string> vec{"EF", "FA", "AB", "EC"};
@@ -42,10 +42,10 @@ protected:
         complete1 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v1));
         std::vector<char> v2 {'A', 'N', 'F'};
         complete2 = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v2));
-        std::vector<std::string> wv1{"AB", "BF", "FD", "AE", "ED"};
+        std::vector<std::string> wv1{{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
         std::vector<int> wv2 {10, 12, 3, 15, 20};
         weighted = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
-        std::vector<std::string> vec{"EF", "FA", "AB", "EC"};
+        std::vector<std::string> vec{{"EF"}, {"FA"}, {"AB"}, {"EC"}};
         simple = GraphFactory().Create("simple", std::make_unique<SimpleParams>(vec));
         std::vector<char> b1_p1 {'A', 'B', 'C', 'N'};
         std::vector<char> b1_p2 {'D', 'E'};
@@ -64,13 +64,14 @@ class TestSimple : public ::testing::Test
 protected:
 	virtual void SetUp()
 	{
-        std::vector<std::string> vec1{"EF", "FA", "AB", "EC"};
+        std::vector<std::string> vec1 {{"EF"}, {"FA"}, {"AB"}, {"EC"}};
         simple1 = GraphFactory().Create("simple", std::make_unique<SimpleParams>(vec1));
-        std::vector<std::string> vec2{"EF", "FC", "AE"};
+        std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
         simple2 = GraphFactory().Create("simple", std::make_unique<SimpleParams>(vec2));
         std::vector<char> v {'A', 'N', 'F'};
         complete = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v));
-        std::vector<std::string> wv1{"AB", "BF", "FD", "AE", "ED"};
+        // complete = GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2));
+        std::vector<std::string> wv1 {{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
         std::vector<int> wv2 {10, 12, 3, 15, 20};
         weighted = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
         std::vector<char> b1_p1 {'A', 'B', 'C', 'N'};
@@ -90,13 +91,13 @@ class TestWeighted : public ::testing::Test
 protected:
 	virtual void SetUp()
 	{
-        std::vector<std::string> wv1{"AB", "BF", "FD", "AE", "ED"};
+        std::vector<std::string> wv1{{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
         std::vector<int> wv2 {10, 12, 3, 15, 20};
         weighted1 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv1, wv2));
-        std::vector<std::string> wv3{"AB", "AD", "BF"};
+        std::vector<std::string> wv3{{"AB"}, {"AD"}, {"BF"}};
         std::vector<int> wv4 {10,12, 15};
         weighted2 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(wv3, wv4));
-        std::vector<std::string> vec2{"EF", "FC", "AE"};
+        std::vector<std::string> vec2{{"EF"}, {"FC"}, {"AE"}};
         simple = GraphFactory().Create("simple", std::make_unique<SimpleParams>(vec2));
         std::vector<char> v {'A', 'N', 'F'};
         complete = GraphFactory().Create("complete", std::make_unique<CompleteParams> (v));
@@ -113,9 +114,18 @@ protected:
 };
 
 TEST_F(TestBipartite, BasicFunctions) {
-    std::vector<std::string> vec1{"EF", "FA"};
+    std::vector<std::string> vec1{{"EF"}, {"FA"}};
     ASSERT_THROW(GraphFactory().Create("graph", std::make_unique<SimpleParams>(vec1)), std::invalid_argument);
     
+    std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2)), std::invalid_argument);
+    std::vector<std::string> wv1{{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
+    std::vector<int> wv2 {10, 12, 3, 15, 20};
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<WeightParams>(wv1, wv2)), std::invalid_argument);
+    std::vector<char> b1_p1 {'A', 'B', 'C', 'N'};
+    std::vector<char> b1_p2 {'D', 'E'};
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<BipartParams> (b1_p1, b1_p2)), std::invalid_argument);
+
     ASSERT_EQ (std::vector<char>({'A', 'B', 'C', 'M', 'D', 'E'}), b1->GetVertices());
     ASSERT_EQ (std::vector<char>({'B', 'K', 'M', 'N', 'E', 'F'}), b2->GetVertices());
     std::vector<std::pair<char, char>> edg1 {{'A', 'D'}, {'A', 'E'}, {'B', 'D'}, {'B', 'E'}, {'C', 'D'}, {'C', 'E'}, {'M', 'D'}, {'M', 'E'}};
@@ -257,7 +267,7 @@ TEST_F(TestWeighted, ArithmeticOperations)
 
 TEST(PathFunction, AllCases)
 {
-    std::vector<std::string> v1 {"AB", "AC", "AF", "BC", "CF", "FE", "CD", "BD", "ED"};
+    std::vector<std::string> v1 {{"AB"}, {"AC"}, {"AF"}, {"BC"}, {"CF"}, {"FE"}, {"CD"}, {"BD"}, {"ED"}};
     std::vector<int> w1 {7, 9, 14, 10, 2, 9, 11, 15, 6};
     auto weight1 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(v1, w1));
     auto weighted1 = dynamic_cast<Weighted*>(weight1.get());
@@ -275,14 +285,27 @@ TEST(PathFunction, AllCases)
     ASSERT_EQ (res4, find_min_path(*weighted2, 'A', 'G'));
     std::vector<std::pair<char, char>> res5 {{'B', 'E'}};
     ASSERT_EQ (res5, find_min_path(*weighted2, 'B', 'E'));
-    std::vector<std::string> v3 {"AB", "AC", "AF", "BC", "CF", "ED"};
+    std::vector<std::string> v3 {{"AB"}, {"AC"}, {"AF"}, {"BC"}, {"CF"}, {"ED"}};
     std::vector<int> w3 {7, 9, 14, 10, 2, 6};
     auto weight3 = GraphFactory().Create("weighted", std::make_unique<WeightParams>(v3, w3));
     auto weighted3 = dynamic_cast<Weighted*>(weight3.get());
     ASSERT_THROW(find_min_path(*weighted3, 'A', 'E'), std::logic_error);
 }
 
+// TEST (One, Two) {
+//     std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
+//     ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2)), std::invalid_argument);
+// }
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+
+// int main()
+// {
+//     std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
+//     auto b = GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2));
+//     return 0;
+// }
