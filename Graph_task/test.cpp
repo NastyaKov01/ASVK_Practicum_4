@@ -113,6 +113,9 @@ protected:
 };
 
 TEST_F(TestBipartite, BasicFunctions) {
+    std::vector<std::string> vec1{"EF", "FA"};
+    ASSERT_THROW(GraphFactory().Create("graph", std::make_unique<SimpleParams>(vec1)), std::invalid_argument);
+    
     ASSERT_EQ (std::vector<char>({'A', 'B', 'C', 'M', 'D', 'E'}), b1->GetVertices());
     ASSERT_EQ (std::vector<char>({'B', 'K', 'M', 'N', 'E', 'F'}), b2->GetVertices());
     std::vector<std::pair<char, char>> edg1 {{'A', 'D'}, {'A', 'E'}, {'B', 'D'}, {'B', 'E'}, {'C', 'D'}, {'C', 'E'}, {'M', 'D'}, {'M', 'E'}};

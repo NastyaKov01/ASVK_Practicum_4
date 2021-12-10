@@ -35,7 +35,7 @@ public:
     std::unique_ptr<TGraph> CreateObject(const std::string& type, std::unique_ptr<Params>&& params) const {
         auto creator = RegisteredCreators.find(type);
         if (creator == RegisteredCreators.end()) {
-            return nullptr;
+            throw std::invalid_argument("Wrong type");
         }
         return creator->second->Create(std::move(params));
     }
