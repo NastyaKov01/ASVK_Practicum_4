@@ -113,6 +113,22 @@ protected:
     std::unique_ptr<TGraph> simple;
 };
 
+TEST(CheckCreation, BasicTypes)
+{
+    std::vector<std::string> vec1{{"EF"}, {"FA"}};
+    std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
+    std::vector<std::string> wv1{{"AB"}, {"BF"}, {"FD"}, {"AE"}, {"ED"}};
+    std::vector<int> wv2 {10, 12, 3, 15, 20};
+    std::vector<char> b1_p1 {'A', 'B', 'C', 'N'};
+    std::vector<char> b1_p2 {'D', 'E'};
+    ASSERT_THROW(GraphFactory().Create("graph", std::make_unique<SimpleParams>(vec1)), std::invalid_argument);
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2)), std::invalid_argument);
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<WeightParams>(wv1, wv2)), std::invalid_argument);
+    ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<BipartParams> (b1_p1, b1_p2)), std::invalid_argument);
+    ASSERT_THROW (GraphFactory().Create("biparte", std::make_unique<WeightParams>(wv1, wv2)), std::invalid_argument);
+    ASSERT_THROW (GraphFactory().Create("weighted", std::make_unique<SimpleParams>(vec2)), std::invalid_argument);
+}
+
 TEST_F(TestBipartite, BasicFunctions) {
     std::vector<std::string> vec1{{"EF"}, {"FA"}};
     ASSERT_THROW(GraphFactory().Create("graph", std::make_unique<SimpleParams>(vec1)), std::invalid_argument);
@@ -292,20 +308,7 @@ TEST(PathFunction, AllCases)
     ASSERT_THROW(find_min_path(*weighted3, 'A', 'E'), std::logic_error);
 }
 
-// TEST (One, Two) {
-//     std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
-//     ASSERT_THROW (GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2)), std::invalid_argument);
-// }
-
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-
-
-// int main()
-// {
-//     std::vector<std::string> vec2 = {{"EF"}, {"FC"}, {"AE"}};
-//     auto b = GraphFactory().Create("complete", std::make_unique<SimpleParams>(vec2));
-//     return 0;
-// }
